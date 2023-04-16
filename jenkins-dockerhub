@@ -1,0 +1,39 @@
+ipipeline {
+   agent any/**{
+       label "${agent}"
+   }*/
+   
+   stages {
+        stage('CleanWorkspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        stage('Checkout') {
+            steps {
+                /**sh '''
+                git clone https://github_user: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@github.com/Bhavyattn/task.git
+                '''*/
+                git branch: 'main', credentialsId: 'jenkins-git', url: 'git@github.com:ShradhaGupta26/docker.git'
+            }
+        }
+        stage('Building Image') {
+            steps {
+              sh '''
+                 pwd
+                 docker build -t myimg:${BUILD_NUMBER} .
+                 '''
+                }
+            }
+        stage('Push') {
+        steps {
+            withCredentials([usernamePassword(credentialsId: 'jenkins-dockerhub', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                sh 'docker login -u $USERNAME -p $PASSWORD docker.io'
+                sh 'docker tag myimg:${BUILD_NUMBER} shradhagupta26/myimg:${BUILD_NUMBER}'
+                sh 'docker push shradhagupta26/myimg:${BUILD_NUMBER}'
+            }
+        }
+    }
+   }
+
+}
