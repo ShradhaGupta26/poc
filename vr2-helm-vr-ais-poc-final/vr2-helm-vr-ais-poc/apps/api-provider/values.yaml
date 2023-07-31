@@ -1,0 +1,134 @@
+replicaCount: 1
+appName: "api-provider-service"
+run: "api-provider-service"
+appRole: "arn:aws:iam::454578700264:role/system/ais-poc-app_service-role"
+ssmCsiRole: "arn:aws:iam::454578700264:role/ais-poc-cluster-sm-csi-20230729113349867800000023"
+prefix: "ttn"
+# acmArn: "arn:aws:acm:ap-south-1:123456789123:certificate/b4ceb24a-fc85-497b-919d-f91cd26e3b5a"
+
+environments:
+  - name: DATABASE_HOST_STRING
+    valueFrom:
+      secretKeyRef:
+         name: vr-creds
+         key: DATABASE_HOST_STRING_Secret
+  - name: DATABASE_NAME
+    valueFrom:
+      secretKeyRef:
+        name: vr-creds
+        key: DATABASE_NAME_Secret
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+         name: vr-creds
+         key: DB_PASSWORD_Secret
+  - name: DB_USER_NAME
+    valueFrom:
+      secretKeyRef:
+         name: vr-creds
+         key: DB_USER_NAME_Secret
+  - name: MIN_HEAP
+    value: "-Xms500m"
+  - name: MAX_HEAP
+    value: "-Xmx500m"
+  - name: server.servlet.contextPath
+    value: "/"
+  - name: LOGS_PATH
+    value: /opt/logs/uat
+  - name:  LOG_LEVEl
+    value: INFO
+   
+image:
+  repository: "454578700264.dkr.ecr.us-east-1.amazonaws.com/ais-poc-ais-poc-ais-api-provider-service"
+  pullPolicy: Always
+  tag: "latest"
+  pullSecret:
+    name: vr-secrets
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1000Mi
+  requests:
+    cpu: 500m
+    memory: 1000Mi
+  containerInfo:
+    containerPort: 8005
+    healthUrl: /actuator/health
+    logPath: /opt/logs/uat/
+
+nameOverride: ""
+fullnameOverride: ""
+
+#serviceAccount:
+#  # Specifies whether a service account should be created
+#  create: true
+#  # Annotations to add to the service account
+#  annotations: {}
+#  # The name of the service account to use.
+#  # If not set and create is true, a name is generated using the fullname template
+#  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+# fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+#   drop:
+#   - ALL
+# readOnlyRootFilesystem: true
+# runAsNonRoot: true
+# runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+# ingress:
+#   annotations:
+#     kubernetes.io/ingress.class: alb
+#     alb.ingress.kubernetes.io/scheme: internet-facing
+#     alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+#     alb.ingress.kubernetes.io/target-type: ip
+#     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80},{"HTTPS": 443}]'
+#   ssl_redirect: true
+#   paths:
+#     - path: /gateway/
+#       serviceName: svc-api-provider-service
+#       servicePort: 80
+  #   - path: /subscriber-gateway/
+  #     serviceName: svc-subscriber-management
+  #     servicePort: 80
+#ingress:
+#  enabled: false
+#  annotations: {}
+#  # kubernetes.io/ingress.class: nginx
+#  # kubernetes.io/tls-acme: "true"
+#  hosts:
+#    -   host: chart-example.local
+#        paths: []
+#  tls: []
+#  #  - secretName: chart-example-tls
+#  #    hosts:
+#  #      - chart-example.local
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+#tolerations:
+#  - key: "availability_zone"
+#    operator: "Exists"
+#    effect: "NoSchedule"
+#  - key: "ec2_lifecycle"
+#    operator: "Exists"
+#    effect: "NoSchedule"
+#  - key: "instance_type"
+#    operator: "Exists"
+#    effect: "NoSchedule"
+
+affinity: {}

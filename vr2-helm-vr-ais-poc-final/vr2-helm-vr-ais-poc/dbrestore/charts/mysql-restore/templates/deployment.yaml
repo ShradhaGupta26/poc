@@ -1,0 +1,79 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.appName }}
+  namespace: {{ $.Release.Namespace  }}
+  labels:
+    jobgroup: {{ .Values.appName }}
+  generation: 1
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        jobgroup: {{ .Values.appName }}
+        app: {{ .Values.appName }}
+        imageTag: "v1.0.1"
+    spec:
+      serviceAccountName: "{{ .Values.appName }}-service-role"
+      terminationGracePeriodSeconds: 60
+      imagePullSecrets:
+      {{- if .Values.image.pullSecret }}
+      - name: {{ .Values.image.pullSecret.name }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.appName }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: Always
+          command: ["/bin/bash","/root/mysql-restore.sh"]
+          ports:
+            - containerPort: {{ .Values.resources.containerInfo.containerPort }}
+              protocol: TCP
+          resources:
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+#          livenessProbe:
+#            httpGet:
+#              path: {{ .Values.resources.containerInfo.healthUrl }}
+#              port: {{ .Values.resources.containerInfo.containerPort }}
+#            initialDelaySeconds: 100
+#            timeoutSeconds: 100
+#            failureThreshold: 10
+#          readinessProbe:
+#            httpGet:
+#              path: {{ .Values.resources.containerInfo.healthUrl }}
+#              port: {{ .Values.resources.containerInfo.containerPort }}
+#            initialDelaySeconds: 100
+#            timeoutSeconds: 100
+#            failureThreshold: 10
+          volumeMounts:
+            - mountPath: {{ .Values.resources.containerInfo.logPath }}{{ .Values.appName }}
+              name: application-logs
+            - mountPath: "/mnt/mongo-restore"
+              name: creds-volume
+              readOnly: true  
+          {{- with .Values.environments }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+            {{- include "java-app.defaultEnvVars" $ | nindent 12 }}
+            {{- include "swagger-host.dnsValue" $ | nindent 12 }}
+      restartPolicy: OnFailure
+    {{ if hasKey .Values "tolerations" }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{ toYaml . | nindent 8 }}
+    {{- end }}
+    {{ end }}
+      {{ if hasKey .Values "nodeSelector" }}
+      nodeSelector:
+      {{ with .nodeSelector }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{ end }}
+    {{ include "dbrestore.spcvolume" . | nindent 6 }}

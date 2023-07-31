@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: "svc-{{ .Values.appName }}"
+    namespace: "{{ $.Release.Namespace }}"
+spec:
+    ports:
+        -   name: www
+            port: 80
+            protocol: TCP
+            targetPort: {{ .Values.resources.containerInfo.containerPort }}
+    selector:
+        run: {{ .Values.appName }}
+    type: ClusterIP

@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}
+  namespace: {{ $.Release.Namespace  }}
+  labels:
+    app: {{ .Values.appName }}
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  generation: 3
+spec:
+  selector:
+    matchLabels:
+      run: {{ .Values.appName }}
+      app: {{ .Values.appName }}
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 2
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: {{ .Values.appName }}
+        app: {{ .Values.appName }}
+        imageTag: "v1.0.1"
+      annotations:
+        iam.amazonaws.com/role: {{ .Values.appRole }}
+    spec:
+      serviceAccountName: "{{ .Values.appName }}-service-role"
+      terminationGracePeriodSeconds: 60
+      imagePullSecrets:
+      {{- if .Values.image.pullSecret }}
+      - name: {{ .Values.image.pullSecret.name }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.appName }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{ .Values.resources.containerInfo.containerPort }}
+              protocol: TCP
+          resources:
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+          # livenessProbe:
+          #   httpGet:
+          #     path: {{ .Values.resources.containerInfo.healthUrl }}
+          #     port: {{ .Values.resources.containerInfo.containerPort }}
+          #   initialDelaySeconds: 100
+          #   timeoutSeconds: 100
+          #   failureThreshold: 10
+          # readinessProbe:
+          #   httpGet:
+          #     path: {{ .Values.resources.containerInfo.healthUrl }}
+          #     port: {{ .Values.resources.containerInfo.containerPort }}
+          #   initialDelaySeconds: 100
+          #   timeoutSeconds: 100
+          #   failureThreshold: 10
+          volumeMounts:
+            - mountPath: {{ .Values.resources.containerInfo.logPath }}{{ .Values.appName }}
+              name: application-logs
+            - name: creds-volume
+              mountPath: "/mnt/api"
+              readOnly: true
+          {{- with .Values.environments }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+            - name: MODULE
+              value: {{ .Values.appName }}
+            - name: ENV
+              value: uat
+            - name: SWAGGER_HOST
+              value: uat-api.videoready.tv 
+            
+    {{ if hasKey .Values "tolerations" }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{ toYaml . | nindent 8 }}
+    {{- end }}
+    {{ end }}
+      {{ if hasKey .Values "nodeSelector" }}
+      nodeSelector:
+      {{ with .nodeSelector }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{ end }}
+      volumes:
+      - name: application-logs
+        hostPath:
+          path: /opt/logs/uat/{{ .Values.appName }}
+      - name: creds-volume
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+              secretProviderClass: aws-secrets2

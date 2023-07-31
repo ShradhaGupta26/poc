@@ -1,0 +1,141 @@
+replicaCount: 1
+appName: "videoready-config"
+run: "videoready-config"
+
+environments:
+  - name: DATABASE_HOST_STRING
+    valueFrom:
+      secretKeyRef:
+         name: vr-creds
+         key: DATABASE_HOST_STRING_Secret
+  - name: SEARCH_DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: vr-creds
+        key: VIDEO_CONFIG_PASSWORD_Secret
+  - name: SEARCH_DATABASE_NAME
+    valueFrom:
+      secretKeyRef:
+        name: vr-creds
+        key: SEARCH_DB_NAME_Secret
+  - name: SEARCH_DB_USER_NAME
+    valueFrom:
+      secretKeyRef:
+        name: vr-creds
+        key: VIDEO_CONFIG_USERNAME_Secret
+  - name: MIN_HEAP
+    value: "-Xms500m"
+  - name: MAX_HEAP
+    value: "-Xmx500m"
+  - name: server.servlet.contextPath
+    value: "/"
+  - name: ELASTIC_HOST
+    valueFrom:
+      secretKeyRef:
+        name: vr-creds
+        key: ELASTIC_HOST_Secret
+  - name: ELASTIC_USER
+    value: "elastic"
+  - name: ELASTIC_PASSWORD
+    value: "hL9JCqGMSQh0PX4ouwJQ"
+  - name: RABBIT_MQ_HOST
+    valueFrom:
+      secretKeyRef:
+        name: vr-creds
+        key: RABBITMQ_HOST_Secret
+  - name: RABBIT_MQ_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: vr-creds
+        key: RABBIT_MQ_USERNAME_Secret
+  - name: RABBIT_MQ_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: vr-creds
+        key: RABBIT_MQ_PASSWORD_Secret
+  - name: GIT_USERNAME
+    value: "nidhi.sharma@tothenew.com"
+  - name: GIT_PASSWORD
+    value: "Gitlab@123ns"
+
+
+image:
+  repository: "454578700264.dkr.ecr.us-east-1.amazonaws.com/videoready-uat-vr-uat-videoready-config"
+  pullPolicy: Always
+  tag: "latest"
+  pullSecret:
+    name: vr-secrets
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1000Mi
+  requests:
+    cpu: 500m
+    memory: 1000Mi
+  containerInfo:
+    containerPort: 8011
+    healthUrl: /pub/actuators
+    logPath: /opt/logs/uat/videoready-config
+
+nameOverride: ""
+fullnameOverride: ""
+
+#serviceAccount:
+#  # Specifies whether a service account should be created
+#  create: true
+#  # Annotations to add to the service account
+#  annotations: {}
+#  # The name of the service account to use.
+#  # If not set and create is true, a name is generated using the fullname template
+#  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+# fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+#   - ALL
+# readOnlyRootFilesystem: true
+# runAsNonRoot: true
+# runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+#ingress:
+#  enabled: false
+#  annotations: {}
+#  # kubernetes.io/ingress.class: nginx
+#  # kubernetes.io/tls-acme: "true"
+#  hosts:
+#    -   host: chart-example.local
+#        paths: []
+#  tls: []
+#  #  - secretName: chart-example-tls
+#  #    hosts:
+#  #      - chart-example.local
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+#tolerations:
+#  - key: "availability_zone"
+#    operator: "Exists"
+#    effect: "NoSchedule"
+#  - key: "ec2_lifecycle"
+#    operator: "Exists"
+#    effect: "NoSchedule"
+#  - key: "instance_type"
+#    operator: "Exists"
+#    effect: "NoSchedule"
+
+affinity: {}
